@@ -1,0 +1,31 @@
+# charon.conf - StrongSwan charon daemon configuration file
+# {{ ansible_managed }}
+
+charon {
+    # Number of worker threads in charon
+    threads = 16
+    
+    # Plugins to load in charon
+    load_modular = yes
+    
+    # DNS servers assigned to peer
+    dns1 = {{ dns_servers[0] }}
+    {% if dns_servers | length > 1 %}
+    dns2 = {{ dns_servers[1] }}
+    {% endif %}
+    
+    # File containing IKE connectivity logs
+    filelog {
+        /var/log/charon.log {
+            # Default loglevel
+            default = 1
+            # Including IKE_SA down events
+            ike_name = yes
+        }
+    }
+    
+    # Accept and respond to IKEv2 MOBIKE extension
+    plugins {
+        include strongswan.d/charon/*.conf
+    }
+}

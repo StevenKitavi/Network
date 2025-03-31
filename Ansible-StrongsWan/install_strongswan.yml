@@ -1,0 +1,159 @@
+---
+# Ansible Playbook to Install and Configure StrongSwan 
+# Filename: install_strongswan.yml
+
+- name: Install and Configure StrongSwan
+  hosts: vpn_servers
+  become: yes
+  vars:
+    strongswan_version: latest
+    ipsec_secrets: "/etc/strongswan/ipsec.secrets"
+    ipsec_conf: "/etc/strongswan/ipsec.conf"
+    vpn_subnet: "10.10.10.0/24"
+    vpn_gateway_ip: "{{ ansible_default_ipv4.address }}"
+    dns_servers:
+      - "8.8.8.8"
+      - "8.8.4.4"
+    # Configure your VPN clients here
+    vpn_clients:
+      - name: client1
+        username: user1
+        password: securepassword1
+      - name: client2
+        username: user2
+        password: securepassword2
+
+  tasks:
+    - name: Update package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+
+    - name: Install StrongSwan and dependencies
+      package:
+        name: 
+          - strongswan
+          - strongswan-pki
+          - libcharon-extra-plugins
+          - libcharon-extauth-plugins
+          - libstrongswan-extra-plugins
+        state: "{{ strongswan_version }}"
+
+    - name: Enable IP forwarding
+      sysctl:
+        name: net.ipv4.ip_forward
+        value: '1'
+        sysctl_set: yes
+        state: present
+        reload: yes
+
+    - name: Configure firewall - Allow IPsec traffic
+      iptables:
+        chain: INPUT
+        protocol: "{{ item }}"
+        jump: ACCEPT
+        comment: "Allow IPsec VPN traffic"
+      with_items:
+        - esp
+        - ah
+        - udp
+      when: ansible_os_family == "Debian"
+      register: iptables_result
+      ignore_errors: yes
+
+    - name: Configure firewall - Allow IKE traffic
+      iptables:
+        chain: INPUT
+        protocol: udp
+        destination_port: 500
+        jump: ACCEPT
+        comment: "Allow IKE traffic"
+      when: ansible_os_family == "Debian"
+      ignore_errors: yes
+
+    - name: Configure firewall - Allow NAT traversal
+      iptables:
+        chain: INPUT
+        protocol: udp
+        destination_port: 4500
+        jump: ACCEPT
+        comment: "Allow NAT traversal"
+      when: ansible_os_family == "Debian"
+      ignore_errors: yes
+
+    - name: Configure NAT masquerade
+      iptables:
+        table: nat
+        chain: POSTROUTING
+        source: "{{ vpn_subnet }}"
+        jump: MASQUERADE
+        comment: "Masquerade VPN client traffic"
+      when: ansible_os_family == "Debian"
+      ignore_errors: yes
+
+    - name: Make iptables rules persistent (Debian/Ubuntu)
+      apt:
+        name: iptables-persistent
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Save iptables rules (Debian/Ubuntu)
+      shell: netfilter-persistent save
+      when: ansible_os_family == "Debian" and iptables_result is not failed
+      ignore_errors: yes
+
+    - name: Backup original ipsec.conf
+      copy:
+        src: "{{ ipsec_conf }}"
+        dest: "{{ ipsec_conf }}.bak"
+        remote_src: yes
+        force: no
+      ignore_errors: yes
+
+    - name: Configure ipsec.conf
+      template:
+        src: templates/ipsec.conf.j2
+        dest: "{{ ipsec_conf }}"
+        owner: root
+        group: root
+        mode: '0644'
+      notify: restart strongswan
+
+    - name: Backup original ipsec.secrets
+      copy:
+        src: "{{ ipsec_secrets }}"
+        dest: "{{ ipsec_secrets }}.bak"
+        remote_src: yes
+        force: no
+      ignore_errors: yes
+
+    - name: Configure ipsec.secrets
+      template:
+        src: templates/ipsec.secrets.j2
+        dest: "{{ ipsec_secrets }}"
+        owner: root
+        group: root
+        mode: '0600'
+      notify: restart strongswan
+
+    - name: Configure charon.conf
+      template:
+        src: templates/charon.conf.j2
+        dest: /etc/strongswan.d/charon.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: restart strongswan
+
+    - name: Ensure StrongSwan is enabled and started
+      service:
+        name: strongswan
+        enabled: yes
+        state: started
+
+  handlers:
+    - name: restart strongswan
+      service:
+        name: strongswan
+        state: restarted
