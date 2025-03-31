@@ -47,4 +47,4 @@ Use the same Key structure to make this possible. **COMMANDS** dictionary stores
 
 The result is as show below 
 
-![Screenshot 2025-03-31 at 21 33 55](https://github.com/user-attachments/assets/a2b53e81-7857-4193-81d9-6910109d4b41)
+![Screenshot 2025-03-31 at 21 40 30](https://github.com/user-attachments/assets/bde9322a-cb31-4260-9707-3980eb485a6c)
