@@ -38,12 +38,13 @@ CONFIG_PARAMS = {
     'duplex': 'auto'
 }
 
-Loop using a for loop to iterate through the CONFIG_PARAMS dictionary using the items() built in function for dictionaries. 
+Loop using a for loop to iterate through the **CONFIG_PARAMS** dictionary using the items() built in function for dictionaries. 
 
-As the iteration happens, use the key from CONFIG_PARAMS dictionary and use that to match the right value to form a complete commmand string from the COMMANDS dictionary
+As the iteration happens, use the key from **CONFIG_PARAMS** dictionary and use that to match the right value to form a complete commmand string from the **COMMANDS** dictionary
 
-Use the same Key structure to make this possible. COMMANDS dictionary stores the command template while the CONFIG_PARAMS has the specific command values 
+Use the same Key structure to make this possible. **COMMANDS** dictionary stores the command template while the **CONFIG_PARAMS** has the specific command values 
 
 
 The result is as show below 
 
+![Screenshot 2025-03-31 at 21 40 30](https://github.com/user-attachments/assets/bde9322a-cb31-4260-9707-3980eb485a6c)
