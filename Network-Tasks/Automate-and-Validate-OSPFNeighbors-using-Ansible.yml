@@ -1,0 +1,66 @@
+---
+#------------------------------------------------PLAY1---------------------------------------------------#
+- name: collecting ospf data
+  hosts: routers
+  connection: local
+  gather_facts: no
+
+  tasks:
+
+  - name: get ospf facts 
+    ospf_facts: device={{ inventory_hostname }} interface={{ ospf_interface }}
+    register: ospf_data
+
+  - name: interface ip address used for OSPF peering
+    debug: msg="local router interface IP address - {{ ospf_data.ofacts.oif_ip }} on {{ ospf_data.ofacts.oif }}"
+
+  - name: is ospf active on interface?
+    debug: msg="ospf active on interface = {{ ospf_data.ofacts.ospf_active_on_inft }}"
+
+  - name: process id check
+    debug: msg= "at least one ospf process is configured on router = {{ ospf_data.ofacts.processExists }}"
+
+  - name: MTUs of interfaces 
+    debug: msg="MTU = {{ ospf_data.ofacts.oif_mtu }}"
+
+  - name: ospf network type
+    debug: msg="network type = {{ ospf_data.ofacts.network_type }}"
+
+  - name: ospf timers on interface
+    debug: msg="{{ ospf_data.ofacts.timers }}"
+  
+  - name: interface status
+    debug: msg="interface status={{ ospf_data.ofacts.interface_status.status }} and line protocol = {{ ospf_data.ofacts.interface_status.line_proto }}"
+
+  - name: display neighbors and state
+    debug: msg="{{ ospf_data.ofacts.oif_neighbors }}"
+
+
+#------------------------------------------------PLAY2---------------------------------------------------#
+
+- name: ospf config validation & automated re-configuration
+  hosts: local
+  connection: local
+  gather_facts: no
+
+  vars:
+    root: "{{ hostvars['10.1.1.110'].inventory_hostname }}"
+    other: "{{ hostvars['10.1.1.120'].inventory_hostname }}"
+
+  vars_files:
+    - vars/simple_vars.yml
+
+  tasks:
+
+  - debug: msg="{{ root }} mtu = {{ r1_mtu }} && {{ other }} mtu = {{ r2_mtu }}"
+
+  - debug: msg="*******MTU mismatch*******"
+    when: r1_mtu != r2_mtu
+
+  - debug: msg="*******MTUs match*******"
+    when: r1_mtu == r2_mtu
+
+  - name: auto re-config of MTU by increasing lower MTU to be equal to higher MTU value
+    mtu: dev1={{ r1_ip }} dev2={{ r2_ip }} mtu1={{ r1_mtu }} mtu2={{ r2_mtu }} int1={{ r1_oif }} int2={{ r2_oif }}
+    when: r1_mtu != r2_mtu 
+
