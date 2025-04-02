@@ -1,0 +1,8 @@
+[all:vars]
+un=ntc
+pwd=ntc123
+
+
+[ios]
+csr1
+csr2
