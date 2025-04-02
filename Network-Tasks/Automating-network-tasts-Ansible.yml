@@ -1,0 +1,20 @@
+---
+- name: testing automated changes to network devices
+  hosts: routers
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+    - name: ensure hostnames
+      hostname: hostname={{new_hostname}} device={{inventory_hostname}}
+    - name: update enable secret
+      enable_secret: secret=cisco device={{inventory_hostname}}
+    - name: update snmp contact
+      snmp_contact: contact='Steven' device={{inventory_hostname}}
+    - name: update snmp location
+      snmp_location: location=Nairobi device={{inventory_hostname}}
+    - name: update snmp read only community strings
+      snmp_ro: ro_string=NEW_STRING remove_existing=no device={{inventory_hostname}}
+    - name: update snmp read write community strings
+      snmp_rw: rw_string=sdnrw1 remove_existing=yes device={{inventory_hostname}}
