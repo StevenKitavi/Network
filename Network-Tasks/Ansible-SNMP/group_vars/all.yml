@@ -1,0 +1,15 @@
+---
+
+ios_provider:
+  username: "{{ un }}"
+  password: "{{ pwd }}"
+  host: "{{ inventory_hostname }}"
+
+snmp:
+  contact: STEVEN
+  location: NTC_HQ_NBO
+  ro:
+    - public123
+    - networkallme
+  rw:
+    - private123

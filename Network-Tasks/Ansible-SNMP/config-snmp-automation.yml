@@ -5,6 +5,9 @@
   gather_facts: no
   connection: local
 
+
+
+
   tasks:
     - name: DEPLOY SNMP COMMANDS WITHIN PLAYBOOK
       ios_config:
@@ -14,7 +17,14 @@
           - snmp-server community private123 RW
           - snmp-server location NTC_HQ_NBO
           - snmp-server contact STEVEN
-        username: "{{ un }}"
-        password: "{{ pwd }}"
-        host: "{{ inventory_hostname }}"
+        provider: "{{ ios_provider }}"
 
+    - name: DEPLOY SNMP COMMANDS From configuration file
+      ios_config:
+        src: "./configs/snmp.cfg"
+        provider: "{{ ios_provider }}"
+
+    - name: DEPLOY SNMP COMMANDS From Jinja2 template
+      ios_config:
+        src: "./templates/snmp.j2"
+        provider: "{{ ios_provider }}"
