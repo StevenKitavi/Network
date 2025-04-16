@@ -1,0 +1,114 @@
+---
+
+- name: Configure Cisco devices
+  hosts: cisco_routers
+  gather_facts: no
+  connection: network_cli
+
+  vars:
+    ansible_network_os: ios
+    ansible_user: admin  # Replace with your username
+    ansible_password: admin_password  # Replace with your password
+    tftp_server: "10.15.14.1"  # Replace with your TFTP server IP
+    ios_image: "c9300-universalk9.17.03.05.SPA.bin"  # Replace with your IOS image name
+
+  tasks:
+    - name: Set hostname
+      cisco.ios.ios_config:
+        lines:
+          - hostname test
+
+    - name: Configure domain name
+      cisco.ios.ios_config:
+        lines:
+          - ip domain-name boakenya.com
+
+    - name: Generate RSA key
+      cisco.ios.ios_config:
+        lines:
+          - crypto key generate rsa modulus 2048
+
+    - name: Create admin user
+      cisco.ios.ios_config:
+        lines:
+          - username dadmin privilege 15 password dadmin
+
+    - name: Configure interface GigabitEthernet0/0/2
+      cisco.ios.ios_config:
+        lines:
+          - ip address 10.115.114.250 255.255.255.0
+        parents: interface GigabitEthernet0/0/2
+
+    - name: Configure TFTP source interface
+      cisco.ios.ios_config:
+        lines:
+          - ip tftp source-interface GigabitEthernet0/0/2
+
+    - name: Configure SSH version
+      cisco.ios.ios_config:
+        lines:
+          - ip ssh version 2
+
+    - name: Configure VTY lines 0-4
+      cisco.ios.ios_config:
+        lines:
+          - privilege level 15
+          - login local
+          - transport input telnet ssh
+          - transport output telnet ssh
+        parents: line vty 0 4
+
+    - name: Configure VTY lines 5-15
+      cisco.ios.ios_config:
+        lines:
+          - privilege level 15
+          - login local
+          - transport input telnet ssh
+          - transport output telnet ssh
+        parents: line vty 5 15
+
+    - name: Copy IOS image from TFTP
+      cisco.ios.ios_command:
+        commands:
+          - command: "copy tftp://{{ tftp_server }}/{{ ios_image }} flash:"
+          - prompt: "Destination filename"
+          - answer: "{{ ios_image }}"
+      register: copy_output
+      # Note: This might need adjustment based on your specific device prompts
+
+    - name: Display current boot system settings
+      cisco.ios.ios_command:
+        commands:
+          - show run | include boot
+      register: boot_output
+
+    - name: Display current boot output
+      debug:
+        var: boot_output.stdout_lines
+
+    - name: Configure boot system
+      cisco.ios.ios_config:
+        lines:
+          - boot system flash bootflash:{{ ios_image }}
+
+    - name: Verify new boot system settings
+      cisco.ios.ios_command:
+        commands:
+          - show run | include boot
+      register: new_boot_output
+
+    - name: Display new boot output
+      debug:
+        var: new_boot_output.stdout_lines
+
+    - name: Save configuration
+      cisco.ios.ios_config:
+        save_when: always
+
+    - name: Reload device (use with caution)
+      cisco.ios.ios_command:
+        commands:
+          - command: "reload"
+          - prompt: "confirm"
+          - answer: "y"
+      # Note: This will cause connectivity loss. Consider using async and poll for production
